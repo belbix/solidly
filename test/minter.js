@@ -128,7 +128,6 @@ describe("minter", function () {
     await network.provider.send("evm_mine")
 
     // *** DEPOSIT TO GAUGE LP from another account
-    // !for making sure that the bug reproduces correctly comment this function and check expected rewards amount
     await depositToGauge(
         owner,
         ve_underlying,
@@ -146,7 +145,6 @@ describe("minter", function () {
 
     const balanceAfter = await ve_underlying.balanceOf(owner2.address);
     // should have the most weekly rewards
-    // ! we have only 10 rewards instead of 2mil
     expect(balanceAfter.sub(balanceBefore)).to.be.above(ethers.utils.parseUnits('2500000'))
   });
 

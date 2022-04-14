@@ -397,6 +397,14 @@ contract Gauge {
         return (((Math.min(endTime, periodFinish[token]) - Math.min(Math.max(timestamp0, startTimestamp), periodFinish[token])) * rewardRate[token] * PRECISION / supply), endTime);
     }
 
+    function _updateRewardForAllTokens() internal {
+        uint length = rewards.length;
+        for (uint i; i < length; i++) {
+            address token = rewards[i];
+            (rewardPerTokenStored[token], lastUpdateTime[token]) = _updateRewardPerToken(token);
+        }
+    }
+
     function _updateRewardPerToken(address token) internal returns (uint, uint) {
         uint _startTimestamp = lastUpdateTime[token];
         uint reward = rewardPerTokenStored[token];
@@ -412,8 +420,8 @@ contract Gauge {
         uint _startIndex = getPriorSupplyIndex(_startTimestamp);
         uint _endIndex = supplyNumCheckpoints-1;
 
-        if (_endIndex - _startIndex > 1) {
-            for (uint i = _startIndex; i < _endIndex-1; i++) {
+        if (_endIndex > 0) {
+            for (uint i = _startIndex; i <= _endIndex-1; i++) {
                 SupplyCheckpoint memory sp0 = supplyCheckpoints[i];
                 if (sp0.supply > 0) {
                     SupplyCheckpoint memory sp1 = supplyCheckpoints[i+1];
@@ -448,8 +456,8 @@ contract Gauge {
 
         uint reward = 0;
 
-        if (_endIndex - _startIndex > 1) {
-            for (uint i = _startIndex; i < _endIndex-1; i++) {
+        if (_endIndex > 0) {
+            for (uint i = _startIndex; i <= _endIndex-1; i++) {
                 Checkpoint memory cp0 = checkpoints[account][i];
                 Checkpoint memory cp1 = checkpoints[account][i+1];
                 (uint _rewardPerTokenStored0,) = getPriorRewardPerToken(token, cp0.timestamp);
@@ -471,6 +479,8 @@ contract Gauge {
 
     function deposit(uint amount, uint tokenId) public lock {
         require(amount > 0);
+
+        _updateRewardForAllTokens();
 
         _safeTransferFrom(stake, msg.sender, address(this), amount);
         totalSupply += amount;
@@ -513,6 +523,8 @@ contract Gauge {
     }
 
     function withdrawToken(uint amount, uint tokenId) public lock {
+        _updateRewardForAllTokens();
+
         totalSupply -= amount;
         balanceOf[msg.sender] -= amount;
         _safeTransfer(stake, msg.sender, amount);
